@@ -1,0 +1,6 @@
+# wmutils-tiled
+
+Aims to create a usable tile window manager in bash using wmutils[0].
+
+[0] https://github.com/wmutils/core
+
