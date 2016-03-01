@@ -17,7 +17,8 @@ usage : $(basename $0) [screen] command arg1 arg2 ...
                               as arguments.
         - unset w g1 [...] : remove window w (given by wid) from the groups
                               passed as arguments.
-        - clean w          : remove window from all groups on all heads.
+        - clean w          : remove window from all groups on the head.
+        - cleanall w       : remove window from all groups on all heads.
         - create g1 [...]  : create the groups passed as arguments (a group
                               must be created before it used). It does nothing
                               if the group already exists.
@@ -104,11 +105,30 @@ whas() {
     return `test -n "$str"`
 }
 
+clean() {
+    wid=$1
+    scr=$2
+    for gp in $GRDIR/$scr/*; do
+        wunset $wid $scr $gp
+    done
+}
+
+cleanall() {
+    wid=$1
+    for scr in $GRDIR/*; do
+        clean $wid $scr
+    done
+}
+
 wset() {
     wid=$1
     scr=$2
     gp=$3
     whas $wid $scr $gp || echo "$wid" >> "$GRDIR/$scr/$gp/windows"
+
+    for scro in $GRDIR/*; do
+        test $scro != $scr && clean $wid $scr
+    done
     # TODO map if necessary
 }
 
@@ -123,15 +143,16 @@ wunset() {
 cmd=$1
 default_head
 # Test if the first argument is a head or the command
-   test $cmd != "help"   \
-&& test $cmd != "toggle" \
-&& test $cmd != "map"    \
-&& test $cmd != "unmap"  \
-&& test $cmd != "set"    \
-&& test $cmd != "unset"  \
-&& test $cmd != "clean"  \
-&& test $cmd != "create" \
-&& test $cmd != "rm"     \
+   test $cmd != "help"     \
+&& test $cmd != "toggle"   \
+&& test $cmd != "map"      \
+&& test $cmd != "unmap"    \
+&& test $cmd != "set"      \
+&& test $cmd != "unset"    \
+&& test $cmd != "clean"    \
+&& test $cmd != "cleanall" \
+&& test $cmd != "create"   \
+&& test $cmd != "rm"       \
 && (test $# -ge 2 || (usage && exit 1)) && cmd=$2 && head=$1 && shift
 
 case $cmd in
@@ -188,6 +209,14 @@ case $cmd in
             check $head $2 && wunset $wid $head $2
             shift
         done
+        ;;
+    "clean")
+        test -z "$2" && usage && exit 1
+        clean $2 $head
+        ;;
+    "cleanall")
+        test -z "$2" && usage && exit 1
+        cleanall $2
         ;;
 
     *)
