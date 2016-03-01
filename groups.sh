@@ -108,10 +108,24 @@ whas() {
     return `test -n "$str"`
 }
 
+notempty() {
+    dir=$1
+    return $(find $dir -mawdepth 0 -type d -empty 2>/dev/null)
+}
+
+wunset() {
+    wid=$1
+    scr=$2
+    gp=$3
+    echo "Unset $scr/$gp/$wid"
+    whas $wid $scr $gp && sed -i "/$wid/d" "$GRDIR/$scr/$gp/windows"
+    # TODO unmap if necessary
+}
+
 clean() {
     wid=$1
     scr=$2
-    for gp in $GRDIR/$scr/*; do
+    notempty $GRDIR/$scr && for gp in $GRDIR/$scr/*; do
         wunset $wid $scr $(basename $gp)
     done
 }
@@ -135,17 +149,9 @@ wset() {
     whas $wid $scr $gp || echo "$wid" >> "$GRDIR/$scr/$gp/windows"
 
     for scro in $GRDIR/*; do
-        test $scro != $scr && clean $wid $scr
+        test $scro != $scr && clean $wid $(basename $scro)
     done
     # TODO map if necessary
-}
-
-wunset() {
-    wid=$1
-    scr=$2
-    gp=$3
-    whas $wid $scr $gp && sed -i "/$wid/d" "$GRDIR/$scr/$gp/windows"
-    # TODO unmap if necessary
 }
 
 cmd=$1
