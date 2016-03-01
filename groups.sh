@@ -8,7 +8,10 @@ usage : $(basename $0) [screen] command arg1 arg2 ...
     screen must be the name of the xrandr output (defaults to the primary
         output).
     command must be one of these :
-        - help : show this help.
+        - help             : show this help.
+        - init             : init the filesystem. Must be called once before
+                             use. If called again, reset the filesystem without
+                             changing the windows.
         - toggle g1 [...]  : toggle the visibility of the groups passed as
                               arguments.
         - map g1 [...]     : map (show) the groups passed as arguments.
@@ -35,9 +38,9 @@ test $# -eq 0 && usage && exit 1
 # It would be better to host it on a tmpfs filesystem, or at least on a
 # filesystem that get cleared at reboot
 GRDIR=${GRDIR:-/tmp/wm-tiles/groups}
-test -d $GRDIR || init
 
 init() {
+    test -d $GRDIR && rm -rf $GRDIR
     mkdir -p $GRDIR
     hds=`xrandr --current | awk 'BEGIN { FS=" " } / connected/ { print $1 }'`
     while read -r hd; do
@@ -109,15 +112,20 @@ clean() {
     wid=$1
     scr=$2
     for gp in $GRDIR/$scr/*; do
-        wunset $wid $scr $gp
+        wunset $wid $scr $(basename $gp)
     done
 }
 
 cleanall() {
     wid=$1
     for scr in $GRDIR/*; do
-        clean $wid $scr
+        clean $wid $(basename $scr)
     done
+}
+
+shouldmap() {
+    wid=$1
+    scr=$2
 }
 
 wset() {
@@ -144,6 +152,7 @@ cmd=$1
 default_head
 # Test if the first argument is a head or the command
    test $cmd != "help"     \
+&& test $cmd != "init"     \
 && test $cmd != "toggle"   \
 && test $cmd != "map"      \
 && test $cmd != "unmap"    \
@@ -158,6 +167,9 @@ default_head
 case $cmd in
     "help")
         usage && exit 0
+        ;;
+    "init")
+        init && exit 0
         ;;
 
     "create")
